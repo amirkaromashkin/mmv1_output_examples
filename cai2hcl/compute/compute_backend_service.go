@@ -26,10 +26,10 @@ import (
 	cai2hclHelper "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/helper"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
 	tpg "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources/tpgresource"
 	transport_tpg "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources/transport"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	apiComputeV1 "google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 )

@@ -17,15 +17,12 @@ package compute
 import (
 	"fmt"
 
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/cai2hcl"
-	cai2hclConfig "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/config"
-	cai2hclHelper "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/helper"
+	cai2hclCommon "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/common"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
-	tpg "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources/tpgresource"
-	transport_tpg "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources/transport"
+	tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta"
+	"github.com/hashicorp/terraform-provider-google-beta/google-beta/tpgresource"
+	transport_tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta/transport"
 	apiComputeV1 "google.golang.org/api/compute/v1"
 )
 
@@ -33,10 +30,10 @@ const ComputeForwardingRuleAssetType string = "compute.googleapis.com/Forwarding
 
 type ComputeForwardingRuleConverter struct {
 	name   string
-	schema map[string]*tfschema.Schema
+	schema map[string]*schema.Schema
 }
 
-func NewComputeForwardingRuleConverter(name string) cai2hcl.Converter {
+func NewComputeForwardingRuleConverter(name string) cai2hclCommon.Converter {
 	schema := tpg.Provider().ResourcesMap[name].Schema
 
 	return &ComputeForwardingRuleConverter{
@@ -45,12 +42,9 @@ func NewComputeForwardingRuleConverter(name string) cai2hcl.Converter {
 	}
 }
 
-func (c *ComputeForwardingRuleConverter) Convert(assets []*caiasset.Asset) ([]*cai2hcl.HCLResourceBlock, error) {
-	var blocks []*cai2hcl.HCLResourceBlock
-	config, error := cai2hclConfig.NewConfig()
-	if error != nil {
-		return nil, error
-	}
+func (c *ComputeForwardingRuleConverter) Convert(assets []*caiasset.Asset) ([]*cai2hclCommon.HCLResourceBlock, error) {
+	var blocks []*cai2hclCommon.HCLResourceBlock
+	config := cai2hclCommon.NewConfig()
 
 	for _, asset := range assets {
 		if asset == nil {
@@ -67,61 +61,68 @@ func (c *ComputeForwardingRuleConverter) Convert(assets []*caiasset.Asset) ([]*c
 	return blocks, nil
 }
 
-func (c *ComputeForwardingRuleConverter) convertResourceData(asset *caiasset.Asset, config *transport_tpg.Config) (*cai2hcl.HCLResourceBlock, error) {
+func (c *ComputeForwardingRuleConverter) convertResourceData(asset *caiasset.Asset, config *transport_tpg.Config) (*cai2hclCommon.HCLResourceBlock, error) {
 	if asset == nil || asset.Resource == nil || asset.Resource.Data == nil {
 		return nil, fmt.Errorf("asset resource data is nil")
 	}
 
+	assetResourceData := asset.Resource.Data
 	var resource *apiComputeV1.ForwardingRule
-	if err := cai2hclHelper.DecodeJSON(asset.Resource.Data, &resource); err != nil {
+	if err := cai2hclCommon.DecodeJSON(assetResourceData, &resource); err != nil {
+		fmt.Println("Unable to decode")
 		return nil, err
 	}
 
-	hcl, _ := resourceComputeForwardingRuleRead(resource, config)
+	hcl, _ := resourceComputeForwardingRuleRead(assetResourceData, config)
 
-	ctyVal, err := cai2hclHelper.MapToCtyValWithSchema(hcl, c.schema)
+	ctyVal, err := cai2hclCommon.MapToCtyValWithSchema(hcl, c.schema)
 	if err != nil {
+		fmt.Println("Unable to decode")
 		return nil, err
 	}
-	return &cai2hcl.HCLResourceBlock{
+	return &cai2hclCommon.HCLResourceBlock{
 		Labels: []string{c.name, resource.Name},
 		Value:  ctyVal,
 	}, nil
 }
 
-func resourceComputeForwardingRuleRead(res *apiComputeV1.ForwardingRule, config map[string]*tfschema.Schema) (map[string]interface{}, error) {
+func resourceComputeForwardingRuleRead(resource map[string]interface{}, config *transport_tpg.Config) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
+	var resource_data *schema.ResourceData = nil
 
-	result["creation_timestamp"] = flattenComputeForwardingRuleCreationTimestamp(res.CreationTimestamp, config)
-	result["is_mirroring_collector"] = flattenComputeForwardingRuleIsMirroringCollector(res.IsMirroringCollector, config)
-	result["psc_connection_id"] = flattenComputeForwardingRulePscConnectionId(res.PscConnectionId, config)
-	result["psc_connection_status"] = flattenComputeForwardingRulePscConnectionStatus(res.PscConnectionStatus, config)
-	result["description"] = flattenComputeForwardingRuleDescription(res.Description, config)
-	result["ip_address"] = flattenComputeForwardingRuleIPAddress(res.IPAddress, config)
-	result["ip_protocol"] = flattenComputeForwardingRuleIPProtocol(res.IPProtocol, config)
-	result["backend_service"] = flattenComputeForwardingRuleBackendService(res.BackendService, config)
-	result["load_balancing_scheme"] = flattenComputeForwardingRuleLoadBalancingScheme(res.LoadBalancingScheme, config)
-	result["name"] = flattenComputeForwardingRuleName(res.Name, config)
-	result["network"] = flattenComputeForwardingRuleNetwork(res.Network, config)
-	result["port_range"] = flattenComputeForwardingRulePortRange(res.PortRange, config)
-	result["ports"] = flattenComputeForwardingRulePorts(res.Ports, config)
-	result["subnetwork"] = flattenComputeForwardingRuleSubnetwork(res.Subnetwork, config)
-	result["target"] = flattenComputeForwardingRuleTarget(res.Target, config)
-	result["allow_global_access"] = flattenComputeForwardingRuleAllowGlobalAccess(res.AllowGlobalAccess, config)
-	result["labels"] = flattenComputeForwardingRuleLabels(res.Labels, config)
-	result["label_fingerprint"] = flattenComputeForwardingRuleLabelFingerprint(res.LabelFingerprint, config)
-	result["all_ports"] = flattenComputeForwardingRuleAllPorts(res.AllPorts, config)
-	result["network_tier"] = flattenComputeForwardingRuleNetworkTier(res.NetworkTier, config)
-	result["service_directory_registrations"] = flattenComputeForwardingRuleServiceDirectoryRegistrations(res.ServiceDirectoryRegistrations, config)
-	result["service_label"] = flattenComputeForwardingRuleServiceLabel(res.ServiceLabel, config)
-	result["service_name"] = flattenComputeForwardingRuleServiceName(res.ServiceName, config)
-	result["source_ip_ranges"] = flattenComputeForwardingRuleSourceIpRanges(res.SourceIpRanges, config)
-	result["base_forwarding_rule"] = flattenComputeForwardingRuleBaseForwardingRule(res.BaseForwardingRule, config)
-	result["allow_psc_global_access"] = flattenComputeForwardingRuleAllowPscGlobalAccess(res.AllowPscGlobalAccess, config)
-	result["ip_version"] = flattenComputeForwardingRuleIpVersion(res.IpVersion, config)
-	result["region"] = flattenComputeForwardingRuleRegion(res.Region, config)
-
-	result["self_link"] = tpgresource.ConvertSelfLinkToV1(res.SelfLink)
+	result["creation_timestamp"] = flattenComputeForwardingRuleCreationTimestamp(resource["creationTimestamp"], resource_data, config)
+	result["is_mirroring_collector"] = flattenComputeForwardingRuleIsMirroringCollector(resource["isMirroringCollector"], resource_data, config)
+	result["psc_connection_id"] = flattenComputeForwardingRulePscConnectionId(resource["pscConnectionId"], resource_data, config)
+	result["psc_connection_status"] = flattenComputeForwardingRulePscConnectionStatus(resource["pscConnectionStatus"], resource_data, config)
+	result["description"] = flattenComputeForwardingRuleDescription(resource["description"], resource_data, config)
+	result["ip_address"] = flattenComputeForwardingRuleIPAddress(resource["IPAddress"], resource_data, config)
+	result["ip_protocol"] = flattenComputeForwardingRuleIPProtocol(resource["IPProtocol"], resource_data, config)
+	result["backend_service"] = flattenComputeForwardingRuleBackendService(resource["backendService"], resource_data, config)
+	result["load_balancing_scheme"] = flattenComputeForwardingRuleLoadBalancingScheme(resource["loadBalancingScheme"], resource_data, config)
+	result["name"] = flattenComputeForwardingRuleName(resource["name"], resource_data, config)
+	result["network"] = flattenComputeForwardingRuleNetwork(resource["network"], resource_data, config)
+	result["port_range"] = flattenComputeForwardingRulePortRange(resource["portRange"], resource_data, config)
+	// Ad-hoc (manually updated after code generation)
+	schemaSetRes := flattenComputeForwardingRulePorts(resource["ports"], resource_data, config)
+	if schemaSetRes != nil {
+		schemaSet := schemaSetRes.(*schema.Set)
+		result["ports"] = cai2hclCommon.ConvertSchemaSetToArray(schemaSet)
+	}
+	result["subnetwork"] = flattenComputeForwardingRuleSubnetwork(resource["subnetwork"], resource_data, config)
+	result["target"] = flattenComputeForwardingRuleTarget(resource["target"], resource_data, config)
+	result["allow_global_access"] = flattenComputeForwardingRuleAllowGlobalAccess(resource["allowGlobalAccess"], resource_data, config)
+	result["labels"] = flattenComputeForwardingRuleLabels(resource["labels"], resource_data, config)
+	result["label_fingerprint"] = flattenComputeForwardingRuleLabelFingerprint(resource["labelFingerprint"], resource_data, config)
+	result["all_ports"] = flattenComputeForwardingRuleAllPorts(resource["allPorts"], resource_data, config)
+	result["network_tier"] = flattenComputeForwardingRuleNetworkTier(resource["networkTier"], resource_data, config)
+	result["service_directory_registrations"] = flattenComputeForwardingRuleServiceDirectoryRegistrations(resource["serviceDirectoryRegistrations"], resource_data, config)
+	result["service_label"] = flattenComputeForwardingRuleServiceLabel(resource["serviceLabel"], resource_data, config)
+	result["service_name"] = flattenComputeForwardingRuleServiceName(resource["serviceName"], resource_data, config)
+	result["source_ip_ranges"] = flattenComputeForwardingRuleSourceIpRanges(resource["sourceIpRanges"], resource_data, config)
+	result["base_forwarding_rule"] = flattenComputeForwardingRuleBaseForwardingRule(resource["baseForwardingRule"], resource_data, config)
+	result["allow_psc_global_access"] = flattenComputeForwardingRuleAllowPscGlobalAccess(resource["allowPscGlobalAccess"], resource_data, config)
+	result["ip_version"] = flattenComputeForwardingRuleIpVersion(resource["ipVersion"], resource_data, config)
+	result["region"] = flattenComputeForwardingRuleRegion(resource["region"], resource_data, config)
 
 	return result, nil
 }
