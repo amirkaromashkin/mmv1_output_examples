@@ -21,15 +21,12 @@ import (
 	"reflect"
 	"regexp"
 
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/cai2hcl"
-	cai2hclConfig "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/config"
-	cai2hclHelper "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/helper"
+	cai2hclCommon "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/common"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
-	tpg "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources"
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources/tpgresource"
-	transport_tpg "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources/transport"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta"
+	"github.com/hashicorp/terraform-provider-google-beta/google-beta/tpgresource"
+	transport_tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta/transport"
 	apiComputeV1 "google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 )
@@ -185,10 +182,10 @@ const ComputeBackendServiceAssetType string = "compute.googleapis.com/BackendSer
 
 type ComputeBackendServiceConverter struct {
 	name   string
-	schema map[string]*tfschema.Schema
+	schema map[string]*schema.Schema
 }
 
-func NewComputeBackendServiceConverter(name string) cai2hcl.Converter {
+func NewComputeBackendServiceConverter(name string) cai2hclCommon.Converter {
 	schema := tpg.Provider().ResourcesMap[name].Schema
 
 	return &ComputeBackendServiceConverter{
@@ -197,12 +194,9 @@ func NewComputeBackendServiceConverter(name string) cai2hcl.Converter {
 	}
 }
 
-func (c *ComputeBackendServiceConverter) Convert(assets []*caiasset.Asset) ([]*cai2hcl.HCLResourceBlock, error) {
-	var blocks []*cai2hcl.HCLResourceBlock
-	config, error := cai2hclConfig.NewConfig()
-	if error != nil {
-		return nil, error
-	}
+func (c *ComputeBackendServiceConverter) Convert(assets []*caiasset.Asset) ([]*cai2hclCommon.HCLResourceBlock, error) {
+	var blocks []*cai2hclCommon.HCLResourceBlock
+	config := cai2hclCommon.NewConfig()
 
 	for _, asset := range assets {
 		if asset == nil {
@@ -219,38 +213,40 @@ func (c *ComputeBackendServiceConverter) Convert(assets []*caiasset.Asset) ([]*c
 	return blocks, nil
 }
 
-func (c *ComputeBackendServiceConverter) convertResourceData(asset *caiasset.Asset, config *transport_tpg.Config) (*cai2hcl.HCLResourceBlock, error) {
+func (c *ComputeBackendServiceConverter) convertResourceData(asset *caiasset.Asset, config *transport_tpg.Config) (*cai2hclCommon.HCLResourceBlock, error) {
 	if asset == nil || asset.Resource == nil || asset.Resource.Data == nil {
 		return nil, fmt.Errorf("asset resource data is nil")
 	}
 
+	assetResourceData := asset.Resource.Data
 	var resource *apiComputeV1.BackendService
-	if err := cai2hclHelper.DecodeJSON(asset.Resource.Data, &resource); err != nil {
+	if err := cai2hclCommon.DecodeJSON(assetResourceData, &resource); err != nil {
 		return nil, err
 	}
 
-	hcl, _ := resourceComputeBackendServiceRead(resource, config)
+	hcl, _ := resourceComputeBackendServiceRead(assetResourceData, config)
 
-	ctyVal, err := cai2hclHelper.MapToCtyValWithSchema(hcl, c.schema)
+	ctyVal, err := cai2hclCommon.MapToCtyValWithSchema(hcl, c.schema)
 	if err != nil {
 		return nil, err
 	}
-	return &cai2hcl.HCLResourceBlock{
+	return &cai2hclCommon.HCLResourceBlock{
 		Labels: []string{c.name, resource.Name},
 		Value:  ctyVal,
 	}, nil
 }
 
-func resourceComputeBackendServiceRead(res *apiComputeV1.BackendService, config map[string]*tfschema.Schema) (map[string]interface{}, error) {
+func resourceComputeBackendServiceRead(resource map[string]interface{}, config *transport_tpg.Config) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
+	var resource_data *schema.ResourceData = nil
 
-	result["affinity_cookie_ttl_sec"] = flattenComputeBackendServiceAffinityCookieTtlSec(res.AffinityCookieTtlSec, config)
-	result["backend"] = flattenComputeBackendServiceBackend(res.Backends, config)
-	result["circuit_breakers"] = flattenComputeBackendServiceCircuitBreakers(res.CircuitBreakers, config)
-	result["compression_mode"] = flattenComputeBackendServiceCompressionMode(res.CompressionMode, config)
-	result["consistent_hash"] = flattenComputeBackendServiceConsistentHash(res.ConsistentHash, config)
-	result["cdn_policy"] = flattenComputeBackendServiceCdnPolicy(res.CdnPolicy, config)
-	if flattenedProp := flattenComputeBackendServiceConnectionDraining(res.ConnectionDraining); flattenedProp != nil {
+	result["affinity_cookie_ttl_sec"] = flattenComputeBackendServiceAffinityCookieTtlSec(resource["affinityCookieTtlSec"], resource_data, config)
+	result["backend"] = flattenComputeBackendServiceBackend(resource["backends"], resource_data, config)
+	result["circuit_breakers"] = flattenComputeBackendServiceCircuitBreakers(resource["circuitBreakers"], resource_data, config)
+	result["compression_mode"] = flattenComputeBackendServiceCompressionMode(resource["compressionMode"], resource_data, config)
+	result["consistent_hash"] = flattenComputeBackendServiceConsistentHash(resource["consistentHash"], resource_data, config)
+	result["cdn_policy"] = flattenComputeBackendServiceCdnPolicy(resource["cdnPolicy"], resource_data, config)
+	if flattenedProp := flattenComputeBackendServiceConnectionDraining(resource["connectionDraining"], resource_data, config); flattenedProp != nil {
 		if gerr, ok := flattenedProp.(*googleapi.Error); ok {
 			return nil, fmt.Errorf("Error reading BackendService: %s", gerr)
 		}
@@ -261,30 +257,28 @@ func resourceComputeBackendServiceRead(res *apiComputeV1.BackendService, config 
 			}
 		}
 	}
-	result["creation_timestamp"] = flattenComputeBackendServiceCreationTimestamp(res.CreationTimestamp, config)
-	result["custom_request_headers"] = flattenComputeBackendServiceCustomRequestHeaders(res.CustomRequestHeaders, config)
-	result["custom_response_headers"] = flattenComputeBackendServiceCustomResponseHeaders(res.CustomResponseHeaders, config)
-	result["fingerprint"] = flattenComputeBackendServiceFingerprint(res.Fingerprint, config)
-	result["description"] = flattenComputeBackendServiceDescription(res.Description, config)
-	result["enable_cdn"] = flattenComputeBackendServiceEnableCDN(res.EnableCDN, config)
-	result["health_checks"] = flattenComputeBackendServiceHealthChecks(res.HealthChecks, config)
-	result["generated_id"] = flattenComputeBackendServiceGeneratedId(res.Id, config)
-	result["iap"] = flattenComputeBackendServiceIap(res.Iap, config)
-	result["load_balancing_scheme"] = flattenComputeBackendServiceLoadBalancingScheme(res.LoadBalancingScheme, config)
-	result["locality_lb_policy"] = flattenComputeBackendServiceLocalityLbPolicy(res.LocalityLbPolicy, config)
-	result["locality_lb_policies"] = flattenComputeBackendServiceLocalityLbPolicies(res.LocalityLbPolicies, config)
-	result["name"] = flattenComputeBackendServiceName(res.Name, config)
-	result["outlier_detection"] = flattenComputeBackendServiceOutlierDetection(res.OutlierDetection, config)
-	result["port_name"] = flattenComputeBackendServicePortName(res.PortName, config)
-	result["protocol"] = flattenComputeBackendServiceProtocol(res.Protocol, config)
-	result["security_policy"] = flattenComputeBackendServiceSecurityPolicy(res.SecurityPolicy, config)
-	result["edge_security_policy"] = flattenComputeBackendServiceEdgeSecurityPolicy(res.EdgeSecurityPolicy, config)
-	result["security_settings"] = flattenComputeBackendServiceSecuritySettings(res.SecuritySettings, config)
-	result["session_affinity"] = flattenComputeBackendServiceSessionAffinity(res.SessionAffinity, config)
-	result["timeout_sec"] = flattenComputeBackendServiceTimeoutSec(res.TimeoutSec, config)
-	result["log_config"] = flattenComputeBackendServiceLogConfig(res.LogConfig, config)
-
-	result["self_link"] = tpgresource.ConvertSelfLinkToV1(res.SelfLink)
+	result["creation_timestamp"] = flattenComputeBackendServiceCreationTimestamp(resource["creationTimestamp"], resource_data, config)
+	result["custom_request_headers"] = flattenComputeBackendServiceCustomRequestHeaders(resource["customRequestHeaders"], resource_data, config)
+	result["custom_response_headers"] = flattenComputeBackendServiceCustomResponseHeaders(resource["customResponseHeaders"], resource_data, config)
+	result["fingerprint"] = flattenComputeBackendServiceFingerprint(resource["fingerprint"], resource_data, config)
+	result["description"] = flattenComputeBackendServiceDescription(resource["description"], resource_data, config)
+	result["enable_cdn"] = flattenComputeBackendServiceEnableCDN(resource["enableCDN"], resource_data, config)
+	result["health_checks"] = flattenComputeBackendServiceHealthChecks(resource["healthChecks"], resource_data, config)
+	result["generated_id"] = flattenComputeBackendServiceGeneratedId(resource["id"], resource_data, config)
+	result["iap"] = flattenComputeBackendServiceIap(resource["iap"], resource_data, config)
+	result["load_balancing_scheme"] = flattenComputeBackendServiceLoadBalancingScheme(resource["loadBalancingScheme"], resource_data, config)
+	result["locality_lb_policy"] = flattenComputeBackendServiceLocalityLbPolicy(resource["localityLbPolicy"], resource_data, config)
+	result["locality_lb_policies"] = flattenComputeBackendServiceLocalityLbPolicies(resource["localityLbPolicies"], resource_data, config)
+	result["name"] = flattenComputeBackendServiceName(resource["name"], resource_data, config)
+	result["outlier_detection"] = flattenComputeBackendServiceOutlierDetection(resource["outlierDetection"], resource_data, config)
+	result["port_name"] = flattenComputeBackendServicePortName(resource["portName"], resource_data, config)
+	result["protocol"] = flattenComputeBackendServiceProtocol(resource["protocol"], resource_data, config)
+	result["security_policy"] = flattenComputeBackendServiceSecurityPolicy(resource["securityPolicy"], resource_data, config)
+	result["edge_security_policy"] = flattenComputeBackendServiceEdgeSecurityPolicy(resource["edgeSecurityPolicy"], resource_data, config)
+	result["security_settings"] = flattenComputeBackendServiceSecuritySettings(resource["securitySettings"], resource_data, config)
+	result["session_affinity"] = flattenComputeBackendServiceSessionAffinity(resource["sessionAffinity"], resource_data, config)
+	result["timeout_sec"] = flattenComputeBackendServiceTimeoutSec(resource["timeoutSec"], resource_data, config)
+	result["log_config"] = flattenComputeBackendServiceLogConfig(resource["logConfig"], resource_data, config)
 
 	return result, nil
 }

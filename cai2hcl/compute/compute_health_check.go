@@ -20,15 +20,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/cai2hcl"
-	cai2hclConfig "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/config"
-	cai2hclHelper "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/helper"
+	cai2hclCommon "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/common"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
-	tpg "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources"
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources/tpgresource"
-	transport_tpg "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/tfplan2cai/converters/google/resources/transport"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta"
+	"github.com/hashicorp/terraform-provider-google-beta/google-beta/tpgresource"
+	transport_tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta/transport"
 	apiComputeV1 "google.golang.org/api/compute/v1"
 )
 
@@ -119,10 +116,10 @@ const ComputeHealthCheckAssetType string = "compute.googleapis.com/HealthCheck"
 
 type ComputeHealthCheckConverter struct {
 	name   string
-	schema map[string]*tfschema.Schema
+	schema map[string]*schema.Schema
 }
 
-func NewComputeHealthCheckConverter(name string) cai2hcl.Converter {
+func NewComputeHealthCheckConverter(name string) cai2hclCommon.Converter {
 	schema := tpg.Provider().ResourcesMap[name].Schema
 
 	return &ComputeHealthCheckConverter{
@@ -131,12 +128,9 @@ func NewComputeHealthCheckConverter(name string) cai2hcl.Converter {
 	}
 }
 
-func (c *ComputeHealthCheckConverter) Convert(assets []*caiasset.Asset) ([]*cai2hcl.HCLResourceBlock, error) {
-	var blocks []*cai2hcl.HCLResourceBlock
-	config, error := cai2hclConfig.NewConfig()
-	if error != nil {
-		return nil, error
-	}
+func (c *ComputeHealthCheckConverter) Convert(assets []*caiasset.Asset) ([]*cai2hclCommon.HCLResourceBlock, error) {
+	var blocks []*cai2hclCommon.HCLResourceBlock
+	config := cai2hclCommon.NewConfig()
 
 	for _, asset := range assets {
 		if asset == nil {
@@ -153,48 +147,48 @@ func (c *ComputeHealthCheckConverter) Convert(assets []*caiasset.Asset) ([]*cai2
 	return blocks, nil
 }
 
-func (c *ComputeHealthCheckConverter) convertResourceData(asset *caiasset.Asset, config *transport_tpg.Config) (*cai2hcl.HCLResourceBlock, error) {
+func (c *ComputeHealthCheckConverter) convertResourceData(asset *caiasset.Asset, config *transport_tpg.Config) (*cai2hclCommon.HCLResourceBlock, error) {
 	if asset == nil || asset.Resource == nil || asset.Resource.Data == nil {
 		return nil, fmt.Errorf("asset resource data is nil")
 	}
 
+	assetResourceData := asset.Resource.Data
 	var resource *apiComputeV1.HealthCheck
-	if err := cai2hclHelper.DecodeJSON(asset.Resource.Data, &resource); err != nil {
+	if err := cai2hclCommon.DecodeJSON(assetResourceData, &resource); err != nil {
 		return nil, err
 	}
 
-	hcl, _ := resourceComputeHealthCheckRead(resource, config)
+	hcl, _ := resourceComputeHealthCheckRead(assetResourceData, config)
 
-	ctyVal, err := cai2hclHelper.MapToCtyValWithSchema(hcl, c.schema)
+	ctyVal, err := cai2hclCommon.MapToCtyValWithSchema(hcl, c.schema)
 	if err != nil {
 		return nil, err
 	}
-	return &cai2hcl.HCLResourceBlock{
+	return &cai2hclCommon.HCLResourceBlock{
 		Labels: []string{c.name, resource.Name},
 		Value:  ctyVal,
 	}, nil
 }
 
-func resourceComputeHealthCheckRead(res *apiComputeV1.HealthCheck, config map[string]*tfschema.Schema) (map[string]interface{}, error) {
+func resourceComputeHealthCheckRead(resource map[string]interface{}, config *transport_tpg.Config) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
+	var resource_data *schema.ResourceData = nil
 
-	result["check_interval_sec"] = flattenComputeHealthCheckCheckIntervalSec(res.CheckIntervalSec, config)
-	result["creation_timestamp"] = flattenComputeHealthCheckCreationTimestamp(res.CreationTimestamp, config)
-	result["description"] = flattenComputeHealthCheckDescription(res.Description, config)
-	result["healthy_threshold"] = flattenComputeHealthCheckHealthyThreshold(res.HealthyThreshold, config)
-	result["name"] = flattenComputeHealthCheckName(res.Name, config)
-	result["timeout_sec"] = flattenComputeHealthCheckTimeoutSec(res.TimeoutSec, config)
-	result["unhealthy_threshold"] = flattenComputeHealthCheckUnhealthyThreshold(res.UnhealthyThreshold, config)
-	result["type"] = flattenComputeHealthCheckType(res.Type, config)
-	result["http_health_check"] = flattenComputeHealthCheckHttpHealthCheck(res.HttpHealthCheck, config)
-	result["https_health_check"] = flattenComputeHealthCheckHttpsHealthCheck(res.HttpsHealthCheck, config)
-	result["tcp_health_check"] = flattenComputeHealthCheckTcpHealthCheck(res.TcpHealthCheck, config)
-	result["ssl_health_check"] = flattenComputeHealthCheckSslHealthCheck(res.SslHealthCheck, config)
-	result["http2_health_check"] = flattenComputeHealthCheckHttp2HealthCheck(res.Http2HealthCheck, config)
-	result["grpc_health_check"] = flattenComputeHealthCheckGrpcHealthCheck(res.GrpcHealthCheck, config)
-	result["log_config"] = flattenComputeHealthCheckLogConfig(res.LogConfig, config)
-
-	result["self_link"] = tpgresource.ConvertSelfLinkToV1(res.SelfLink)
+	result["check_interval_sec"] = flattenComputeHealthCheckCheckIntervalSec(resource["checkIntervalSec"], resource_data, config)
+	result["creation_timestamp"] = flattenComputeHealthCheckCreationTimestamp(resource["creationTimestamp"], resource_data, config)
+	result["description"] = flattenComputeHealthCheckDescription(resource["description"], resource_data, config)
+	result["healthy_threshold"] = flattenComputeHealthCheckHealthyThreshold(resource["healthyThreshold"], resource_data, config)
+	result["name"] = flattenComputeHealthCheckName(resource["name"], resource_data, config)
+	result["timeout_sec"] = flattenComputeHealthCheckTimeoutSec(resource["timeoutSec"], resource_data, config)
+	result["unhealthy_threshold"] = flattenComputeHealthCheckUnhealthyThreshold(resource["unhealthyThreshold"], resource_data, config)
+	result["type"] = flattenComputeHealthCheckType(resource["type"], resource_data, config)
+	result["http_health_check"] = flattenComputeHealthCheckHttpHealthCheck(resource["httpHealthCheck"], resource_data, config)
+	result["https_health_check"] = flattenComputeHealthCheckHttpsHealthCheck(resource["httpsHealthCheck"], resource_data, config)
+	result["tcp_health_check"] = flattenComputeHealthCheckTcpHealthCheck(resource["tcpHealthCheck"], resource_data, config)
+	result["ssl_health_check"] = flattenComputeHealthCheckSslHealthCheck(resource["sslHealthCheck"], resource_data, config)
+	result["http2_health_check"] = flattenComputeHealthCheckHttp2HealthCheck(resource["http2HealthCheck"], resource_data, config)
+	result["grpc_health_check"] = flattenComputeHealthCheckGrpcHealthCheck(resource["grpcHealthCheck"], resource_data, config)
+	result["log_config"] = flattenComputeHealthCheckLogConfig(resource["logConfig"], resource_data, config)
 
 	return result, nil
 }

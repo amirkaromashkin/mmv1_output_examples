@@ -69,7 +69,6 @@ func (c *ComputeForwardingRuleConverter) convertResourceData(asset *caiasset.Ass
 	assetResourceData := asset.Resource.Data
 	var resource *apiComputeV1.ForwardingRule
 	if err := cai2hclCommon.DecodeJSON(assetResourceData, &resource); err != nil {
-		fmt.Println("Unable to decode")
 		return nil, err
 	}
 
@@ -77,7 +76,6 @@ func (c *ComputeForwardingRuleConverter) convertResourceData(asset *caiasset.Ass
 
 	ctyVal, err := cai2hclCommon.MapToCtyValWithSchema(hcl, c.schema)
 	if err != nil {
-		fmt.Println("Unable to decode")
 		return nil, err
 	}
 	return &cai2hclCommon.HCLResourceBlock{
@@ -102,12 +100,7 @@ func resourceComputeForwardingRuleRead(resource map[string]interface{}, config *
 	result["name"] = flattenComputeForwardingRuleName(resource["name"], resource_data, config)
 	result["network"] = flattenComputeForwardingRuleNetwork(resource["network"], resource_data, config)
 	result["port_range"] = flattenComputeForwardingRulePortRange(resource["portRange"], resource_data, config)
-	// Ad-hoc (manually updated after code generation)
-	schemaSetRes := flattenComputeForwardingRulePorts(resource["ports"], resource_data, config)
-	if schemaSetRes != nil {
-		schemaSet := schemaSetRes.(*schema.Set)
-		result["ports"] = cai2hclCommon.ConvertSchemaSetToArray(schemaSet)
-	}
+	result["ports"] = flattenComputeForwardingRulePorts(resource["ports"], resource_data, config)
 	result["subnetwork"] = flattenComputeForwardingRuleSubnetwork(resource["subnetwork"], resource_data, config)
 	result["target"] = flattenComputeForwardingRuleTarget(resource["target"], resource_data, config)
 	result["allow_global_access"] = flattenComputeForwardingRuleAllowGlobalAccess(resource["allowGlobalAccess"], resource_data, config)
