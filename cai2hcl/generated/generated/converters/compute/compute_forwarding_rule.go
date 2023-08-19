@@ -17,7 +17,7 @@ package compute
 import (
 	"fmt"
 
-	cai2hclCommon "github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/common"
+	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/generated/converters/common"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta"
@@ -33,7 +33,7 @@ type ComputeForwardingRuleConverter struct {
 	schema map[string]*schema.Schema
 }
 
-func NewComputeForwardingRuleConverter(name string) cai2hclCommon.Converter {
+func NewComputeForwardingRuleConverter(name string) common.Converter {
 	schema := tpg.Provider().ResourcesMap[name].Schema
 
 	return &ComputeForwardingRuleConverter{
@@ -42,9 +42,9 @@ func NewComputeForwardingRuleConverter(name string) cai2hclCommon.Converter {
 	}
 }
 
-func (c *ComputeForwardingRuleConverter) Convert(assets []*caiasset.Asset) ([]*cai2hclCommon.HCLResourceBlock, error) {
-	var blocks []*cai2hclCommon.HCLResourceBlock
-	config := cai2hclCommon.NewConfig()
+func (c *ComputeForwardingRuleConverter) Convert(assets []*caiasset.Asset) ([]*common.HCLResourceBlock, error) {
+	var blocks []*common.HCLResourceBlock
+	config := common.NewConfig()
 
 	for _, asset := range assets {
 		if asset == nil {
@@ -61,24 +61,24 @@ func (c *ComputeForwardingRuleConverter) Convert(assets []*caiasset.Asset) ([]*c
 	return blocks, nil
 }
 
-func (c *ComputeForwardingRuleConverter) convertResourceData(asset *caiasset.Asset, config *transport_tpg.Config) (*cai2hclCommon.HCLResourceBlock, error) {
+func (c *ComputeForwardingRuleConverter) convertResourceData(asset *caiasset.Asset, config *transport_tpg.Config) (*common.HCLResourceBlock, error) {
 	if asset == nil || asset.Resource == nil || asset.Resource.Data == nil {
 		return nil, fmt.Errorf("asset resource data is nil")
 	}
 
 	assetResourceData := asset.Resource.Data
 	var resource *apiComputeV1.ForwardingRule
-	if err := cai2hclCommon.DecodeJSON(assetResourceData, &resource); err != nil {
+	if err := common.DecodeJSON(assetResourceData, &resource); err != nil {
 		return nil, err
 	}
 
 	hcl, _ := resourceComputeForwardingRuleRead(assetResourceData, config)
 
-	ctyVal, err := cai2hclCommon.MapToCtyValWithSchema(hcl, c.schema)
+	ctyVal, err := common.MapToCtyValWithSchema(hcl, c.schema)
 	if err != nil {
 		return nil, err
 	}
-	return &cai2hclCommon.HCLResourceBlock{
+	return &common.HCLResourceBlock{
 		Labels: []string{c.name, resource.Name},
 		Value:  ctyVal,
 	}, nil
