@@ -1,9 +1,9 @@
-// Package cai2hcl converts CAI assets to hcl bytes.
-package cai2hcl
+package generated
 
 import (
 	"fmt"
 
+	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/generated/converters/common"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
 
 	"github.com/hashicorp/hcl/hcl/printer"
@@ -14,12 +14,12 @@ import (
 
 // Options is a struct for options so that adding new options does not
 // require updating function signatures all along the pipe.
-type Options struct {
+type ConvertOptions struct {
 	ErrorLogger *zap.Logger
 }
 
 // Convert converts Asset into HCL.
-func Convert(assets []*caiasset.Asset, options *Options) ([]byte, error) {
+func Convert(assets []*caiasset.Asset, converterNames map[string]string, converterMap map[string]common.Converter, options *ConvertOptions) ([]byte, error) {
 	if options == nil || options.ErrorLogger == nil {
 		return nil, fmt.Errorf("logger is not initialized")
 	}
