@@ -20,10 +20,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/generated/converters/common"
+	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/google/converters/common"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta"
 	"github.com/hashicorp/terraform-provider-google-beta/google-beta/tpgresource"
 	transport_tpg "github.com/hashicorp/terraform-provider-google-beta/google-beta/transport"
 	apiComputeV1 "google.golang.org/api/compute/v1"
@@ -119,9 +118,7 @@ type ComputeHealthCheckConverter struct {
 	schema map[string]*schema.Schema
 }
 
-func NewComputeHealthCheckConverter(name string) common.Converter {
-	schema := tpg.Provider().ResourcesMap[name].Schema
-
+func NewComputeHealthCheckConverter(name string, schema map[string]*schema.Schema) common.Converter {
 	return &ComputeHealthCheckConverter{
 		name:   name,
 		schema: schema,

@@ -6,7 +6,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
 
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/generated/converters/common"
+	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/google/converters/common"
 	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/zclconf/go-cty/cty"
 	"google.golang.org/api/compute/v1"
@@ -22,7 +22,7 @@ type ComputeInstanceConverter struct {
 }
 
 // NewComputeInstanceConverter returns an HCL converter for compute instance.
-func NewComputeInstanceConverter(schema map[string]*tfschema.Schema, name string) common.Converter {
+func NewComputeInstanceConverter(name string, schema map[string]*tfschema.Schema) common.Converter {
 	return &ComputeInstanceConverter{
 		name:   name,
 		schema: schema,

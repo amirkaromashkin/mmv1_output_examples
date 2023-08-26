@@ -1,11 +1,11 @@
-package custom
+package converters
 
 import (
 	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/generated/converters/common"
+	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/google/converters/common"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
 
 	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -27,7 +27,7 @@ type ProjectConverter struct {
 }
 
 // NewProjectConverter returns an HCL converter for compute project.
-func NewProjectConverter(schema map[string]*tfschema.Schema, name string) common.Converter {
+func NewProjectConverter(name string, schema map[string]*tfschema.Schema) common.Converter {
 	return &ProjectConverter{
 		name:     name,
 		schema:   schema,

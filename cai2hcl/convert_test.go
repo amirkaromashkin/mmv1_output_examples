@@ -3,13 +3,9 @@ package cai2hcl
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/cai2hcl/generated"
 	"github.com/GoogleCloudPlatform/terraform-google-conversion/v2/caiasset"
 
 	"github.com/google/go-cmp/cmp"
@@ -21,15 +17,22 @@ type TestCase struct {
 	sourceFolder string
 }
 
+// Files from "testdata/" to test json -> tf conversion.
+var testDataFileNames = []string{
+	"compute_instance_iam",
+	"full_compute_instance",
+	"project_create",
+	"project_iam",
+	"full_compute_forwarding_rule",
+	"full_compute_backend_service",
+	"full_compute_health_check",
+}
+
 func TestCai2HclConvert(t *testing.T) {
 	cases := []TestCase{}
 
-	for _, name := range getCustomConvertersTestFileNames() {
-		cases = append(cases, TestCase{name: name, sourceFolder: "../testdata"})
-	}
-
-	for _, name := range getGeneratedConvertersTestFileNames() {
-		cases = append(cases, TestCase{name: name, sourceFolder: "./generated/converters/testdata"})
+	for _, name := range testDataFileNames {
+		cases = append(cases, TestCase{name: name, sourceFolder: "./testdata"})
 	}
 
 	for i := range cases {
@@ -44,39 +47,6 @@ func TestCai2HclConvert(t *testing.T) {
 			}
 		})
 	}
-}
-
-func getCustomConvertersTestFileNames() []string {
-	return []string{
-		"full_compute_instance",
-		"compute_instance_iam",
-		"project_create",
-		"project_iam",
-	}
-}
-
-func getGeneratedConvertersTestFileNames() []string {
-	generatedTestFiles, err := os.ReadDir("./generated/converters/testdata")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	namesArr := []string{}
-	namesSet := make(map[string]bool)
-	for _, file := range generatedTestFiles {
-		name := file.Name()
-		if _, ok := namesSet[name]; !ok {
-			namesArr = append(namesArr, fileNameWithoutExt(file.Name()))
-		}
-
-		namesSet[name] = true
-	}
-
-	return namesArr
-}
-
-func fileNameWithoutExt(fileName string) string {
-	return strings.TrimSuffix(fileName, filepath.Ext(fileName))
 }
 
 func assertTestData(testCase TestCase) (err error) {
@@ -101,7 +71,7 @@ func assertTestData(testCase TestCase) (err error) {
 
 	logger, err := zap.NewDevelopment()
 
-	got, err := Convert(assets, &generated.ConvertOptions{
+	got, err := Convert(assets, &ConvertOptions{
 		ErrorLogger: logger,
 	})
 	if err != nil {
